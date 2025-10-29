@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Klassenprojekt Märchen 🐸</title>
+<link rel="icon" type="image/jpeg" href="maerchenfrosch.jpg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root {
+  --bg:#1e1e1e; --text:#e0e0e0; --card:#2d2d2d; --accent:#6cb6ff;
+}
+body.light {
+  --bg:#f5f5f5; --text:#222; --card:#fff; --accent:#0078ff;
+}
+body {margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text);
+display:flex;flex-direction:column;min-height:100vh;transition:background .3s,color .3s;}
+#topBar{display:flex;align-items:center;justify-content:space-between;background:var(--card);
+padding:10px 20px;position:sticky;top:0;z-index:10;}
+#profile{width:50px;height:50px;border-radius:50%;background:var(--accent);display:flex;
+justify-content:center;align-items:center;font-size:24px;font-weight:bold;}
+button{background:#fff;color:#1e1e1e;border:none;border-radius:15px;padding:8px 15px;cursor:pointer;font-size:14px;}
+button:hover{background:var(--accent);color:#fff;transition:0.2s;}
+#logoutBtn,#themeToggle{margin-left:10px;}
+#content{flex:1;padding:20px;}
+#welcome{text-align:center;font-size:28px;margin-bottom:20px;
+background:linear-gradient(90deg,#ff6ec7,#6cb6ff,#ffeb3b,#ff6ec7);-webkit-background-clip:text;color:transparent;}
+#uploadArea{display:flex;flex-direction:column;gap:10px;max-width:600px;margin:auto;}
+textarea{width:100%;height:150px;border-radius:10px;border:none;padding:10px;
+background:#3c3c3c;color:#fff;font-size:16px;resize:vertical;}
+body.light textarea{background:#eee;color:#222;}
+#uploadBtn{align-self:flex-end;}
+#stories{margin-top:30px;max-width:700px;margin-inline:auto;}
+.story{background:var(--card);border-radius:15px;padding:15px;margin-bottom:20px;
+box-shadow:0 0 10px rgba(0,0,0,0.3);display:flex;flex-direction:column;gap:10px;}
+.storyHeader{display:flex;justify-content:space-between;align-items:center;}
+.storyText{max-height:250px;overflow-y:auto;background:#3c3c3c;padding:10px;border-radius:10px;
+white-space:pre-wrap;color:#fff;}
+body.light .storyText{background:#eee;color:#222;}
+.editArea textarea{width:100%;height:120px;padding:8px;border-radius:10px;font-size:16px;}
+.editArea button{margin-top:5px;}
+.commentBox{margin-top:10px;}
+.commentBox input{width:100%;padding:8px;border-radius:10px;border:none;background:#3c3c3c;color:#fff;}
+body.light .commentBox input{background:#eee;color:#222;}
+.comment{margin-top:5px;padding:8px;background:#444;border-radius:10px;}
+body.light .comment{background:#ddd;}
+.comment small{display:block;color:#aaa;font-size:12px;}
+.likeArea{display:flex;align-items:center;gap:5px;font-size:18px;cursor:pointer;user-select:none;}
+.likeArea span{font-size:14px;}
+.voiceControls{display:flex;gap:10px;margin-bottom:10px;}
+.voiceControls button{flex:1;font-size:16px;padding:8px;border-radius:10px;}
+footer{text-align:center;padding:10px;background:#1b1b1b;font-size:12px;color:#888;}
+body.light footer{background:#ddd;color:#444;}
+#loginScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--bg);
+display:flex;justify-content:center;align-items:center;flex-direction:column;z-index:100;}
+#loginBox{background:var(--card);padding:30px;border-radius:15px;display:flex;flex-direction:column;
+gap:10px;width:90%;max-width:400px;}
+#loginBox input{padding:10px;border-radius:10px;border:none;background:#3c3c3c;color:#fff;font-size:16px;}
+body.light #loginBox input{background:#eee;color:#222;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div id="loginBox">
+    <h2>🔐 Anmeldung</h2>
+    <label for="username">Name:</label>
+    <input id="username" placeholder="z.B. Finn">
+    <label for="password">Passwort:</label>
+    <input id="password" type="password" placeholder="Passwort eingeben">
+    <button id="loginBtn">Anmelden</button>
+    <p id="loginMessage" style="color:#ff6ec7;"></p>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="topBar">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div id="profile"></div>
+    <div id="userNameDisplay"></div>
+  </div>
+  <div>
+    <button id="themeToggle">🌙</button>
+    <button id="logoutBtn">🚪 Logout</button>
+  </div>
+</div>
+
+<div id="content">
+  <div id="welcome"></div>
+  <div id="uploadArea">
+    <textarea id="storyText" placeholder="Schreibe hier dein englisches Märchen..."></textarea>
+    <button id="uploadBtn">📜 Hochladen</button>
+  </div>
+  <div id="stories"></div>
+</div>
+
+<footer>© Klasse 8B Märchenprojekt | by Finn 🐸</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDsW9JKhyBmlxv-BAcAa4gyHOX6R-KLoQA",
+  authDomain: "englischfairytale8b.firebaseapp.com",
+  databaseURL: "https://englischfairytale8b-default-rtdb.firebaseio.com",
+  projectId: "englischfairytale8b",
+  storageBucket: "englischfairytale8b.appspot.com",
+  messagingSenderId: "1009055770845",
+  appId: "1:1009055770845:web:56ab77e4788b4bc4ced334"
+};
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Theme toggle
+document.getElementById("themeToggle").addEventListener("click",()=>{
+  document.body.classList.toggle("light");
+  document.getElementById("themeToggle").textContent=document.body.classList.contains("light")?"☀️":"🌙";
+});
+
+// User Daten
+const users={
+  "Finn":"apfel327","Gábor":"mango512","Amelie":"kiwi203","Anna":"birne441","Emil":"pfirsich118",
+  "Enes":"traube794","Jakob":"kirsche682","Leo G.":"banane254","Lena":"beere965","Leo H.":"apfel591",
+  "Leonas":"pflaume721","Liam":"orange433","Luca":"zitrone312","Nelli":"melon483","Paul":"kokos189",
+  "Simon":"apfel901","Marlene":"mango520","Sophia":"birne718","Oskar":"kiwi265","Julian":"traube674","Korbinian":"banane419","FrauKöber":"Lehrer123"
+};
+
+// Login
+document.getElementById("loginBtn").addEventListener("click",()=>{
+  const name=document.getElementById("username").value.trim();
+  const pass=document.getElementById("password").value.trim();
+  if(users[name]===pass){localStorage.setItem("loggedInUser",name);startApp(name);}
+  else document.getElementById("loginMessage").textContent="❌ Falscher Name oder Passwort!";
+});
+document.getElementById("logoutBtn").addEventListener("click",()=>{localStorage.removeItem("loggedInUser");location.reload();});
+
+function startApp(user){
+  document.getElementById("loginScreen").style.display="none";
+  document.getElementById("profile").textContent=user.charAt(0).toUpperCase();
+  document.getElementById("userNameDisplay").textContent=user;
+  document.getElementById("welcome").textContent=`Welcome back, ${user}! ✨`;
+  loadStories();
+}
+const logged=localStorage.getItem("loggedInUser");
+if(logged) startApp(logged);
+
+// Upload
+document.getElementById("uploadBtn").addEventListener("click",()=>{
+  const text=document.getElementById("storyText").value.trim();
+  const user=localStorage.getItem("loggedInUser");
+  if(!text)return alert("Bitte gib einen Text ein!");
+  push(ref(db,'stories'),{author:user,text,comments:{},likes:{},time:Date.now()});
+  document.getElementById("storyText").value="";
+});
+
+// Load Stories
+function loadStories(){
+  const user=localStorage.getItem("loggedInUser");
+  const storiesRef=ref(db,'stories');
+  const container=document.getElementById("stories");
+
+  onValue(storiesRef,snap=>{
+    const data=snap.val()||{};
+    container.innerHTML="";
+    Object.entries(data).reverse().forEach(([key,s])=>{
+      const div=document.createElement("div");
+      div.className="story";
+
+      const header=document.createElement("div");
+      header.className="storyHeader";
+
+      const title=document.createElement("h3");
+      title.textContent=`📖 ${s.author}`;
+
+      const btns=document.createElement("div");
+      btns.style.display="flex"; btns.style.gap="10px"; btns.style.flexWrap="wrap";
+
+      // Voice controls
+      const voiceSel=document.createElement("select");
+      voiceSel.innerHTML=`<option>Default</option><option>British</option>`;
+      btns.appendChild(voiceSel);
+
+      const readBtn=document.createElement("button"); readBtn.textContent="▶️ Play";
+      readBtn.style.background="#6cb6ff"; readBtn.style.color="#fff";
+      readBtn.addEventListener("click",()=>readStory(s.text,voiceSel.value));
+      btns.appendChild(readBtn);
+
+      const pauseBtn=document.createElement("button"); pauseBtn.textContent="⏸️ Pause";
+      pauseBtn.style.background="#ffab00"; pauseBtn.style.color="#fff";
+      pauseBtn.addEventListener("click",()=>speechSynthesis.pause());
+      btns.appendChild(pauseBtn);
+
+      const stopBtn=document.createElement("button"); stopBtn.textContent="⏹️ Stop";
+      stopBtn.style.background="#ff3b30"; stopBtn.style.color="#fff";
+      stopBtn.addEventListener("click",()=>speechSynthesis.cancel());
+      btns.appendChild(stopBtn);
+
+      // Edit/Delete
+      if(user===s.author||user==="Finn"){
+        const editBtn=document.createElement("button");
+        editBtn.textContent="✏️ Bearbeiten";
+        editBtn.addEventListener("click",()=>{
+          if(div.querySelector(".editArea")) return;
+          const editDiv=document.createElement("div");
+          editDiv.className="editArea"; editDiv.style.marginTop="10px";
+          const textarea=document.createElement("textarea");
+          textarea.value=s.text;
+          const saveBtn=document.createElement("button"); saveBtn.textContent="💾 Speichern";
+          saveBtn.addEventListener("click",()=>{
+            if(textarea.value.trim()){ update(ref(db,'stories/'+key),{text:textarea.value}); editDiv.remove(); }
+          });
+          editDiv.appendChild(textarea); editDiv.appendChild(saveBtn);
+          div.appendChild(editDiv);
+        });
+        btns.appendChild(editBtn);
+
+        const delBtn=document.createElement("button");
+        delBtn.textContent="🗑️ Löschen";
+        delBtn.addEventListener("click",()=>{if(confirm("Löschen?")) set(ref(db,'stories/'+key),null);});
+        btns.appendChild(delBtn);
+      }
+
+      header.appendChild(title); header.appendChild(btns);
+      div.appendChild(header);
+
+      const storyTxt=document.createElement("div"); storyTxt.className="storyText";
+      storyTxt.textContent=s.text; div.appendChild(storyTxt);
+
+      // Likes
+      const likeArea=document.createElement("div"); likeArea.className="likeArea";
+      const heart=document.createElement("span"); const likeCount=document.createElement("span");
+      const likes=s.likes?Object.keys(s.likes).length:0;
+      likeCount.textContent=likes; heart.textContent=s.likes&&s.likes[user]?"❤️":"🤍";
+      likeArea.appendChild(heart); likeArea.appendChild(likeCount);
+      likeArea.addEventListener("click",()=>{
+        const liked=s.likes&&s.likes[user]; const path=`stories/${key}/likes/${user}`;
+        if(liked)set(ref(db,path),null); else set(ref(db,path),true);
+      });
+      div.appendChild(likeArea);
+
+      // Comments
+      const commentBox=document.createElement("div"); commentBox.className="commentBox";
+      const input=document.createElement("input"); input.placeholder="Kommentiere...";
+      input.addEventListener("keydown",e=>{
+        if(e.key==="Enter"&&input.value.trim()){
+          push(ref(db,`stories/${key}/comments`),{author:user,text:input.value.trim(),time:Date.now()});
+          input.value="";
+        }
+      });
+      commentBox.appendChild(input);
+      if(s.comments){
+        Object.values(s.comments).forEach(c=>{
+          const cDiv=document.createElement("div"); cDiv.className="comment";
+          const t=new Date(c.time).toLocaleString();
+          cDiv.innerHTML=`<b>${c.author}:</b> ${c.text}<small>${t}</small>`;
+          commentBox.appendChild(cDiv);
+        });
+      }
+      div.appendChild(commentBox);
+      container.appendChild(div);
+    });
+  });
+}
+
+// Voice
+function readStory(text,voiceType){
+  if(!text) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=voiceType==="British"?"en-GB":"en-US";
+  speechSynthesis.speak(u);
+}
+</script>
+
+</body>
+</html>
