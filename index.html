@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Klassenprojekt Märchen 🐸</title>
+<link rel="icon" type="image/jpeg" href="maerchenfrosch.jpg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body { margin:0; font-family:Arial,sans-serif; background:#1e1e1e; color:#e0e0e0; display:flex; flex-direction:column; min-height:100vh;}
+#topBar{display:flex;align-items:center;justify-content:space-between;background:#2d2d2d;padding:10px 20px;position:sticky;top:0;z-index:10;}
+#profile{width:50px;height:50px;border-radius:50%;background:#6cb6ff;display:flex;justify-content:center;align-items:center;font-size:24px;font-weight:bold;}
+button{background:#fff;color:#1e1e1e;border:none;border-radius:15px;padding:8px 15px;cursor:pointer;font-size:14px;}
+button:hover{background:#6cb6ff;color:#fff;transition:0.2s;}
+#logoutBtn{margin-left:10px;}
+#content{flex:1;padding:20px;}
+#welcome{text-align:center;font-size:28px;margin-bottom:20px;background:linear-gradient(90deg,#ff6ec7,#6cb6ff,#ffeb3b,#ff6ec7);-webkit-background-clip:text;color:transparent;}
+#uploadArea{display:flex;flex-direction:column;gap:10px;max-width:600px;margin:auto;}
+textarea{width:100%;height:150px;border-radius:10px;border:none;padding:10px;background:#3c3c3c;color:#fff;font-size:16px;resize:vertical;}
+#uploadBtn{align-self:flex-end;}
+#stories{margin-top:30px;max-width:700px;margin-inline:auto;}
+.story{background:#2d2d2d;border-radius:15px;padding:15px;margin-bottom:15px;box-shadow:0 0 10px rgba(0,0,0,0.3);display:flex;flex-direction:column;}
+.storyHeader{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#2d2d2d;z-index:5;padding-bottom:5px;}
+.storyText{max-height:250px;overflow-y:auto;background:#3c3c3c;padding:10px;border-radius:10px;margin-top:10px;white-space:pre-wrap;}
+footer{text-align:center;padding:10px;background:#1b1b1b;font-size:12px;color:#888;}
+#loginScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:#1e1e1e;display:flex;justify-content:center;align-items:center;flex-direction:column;z-index:100;}
+#loginBox{background:#2d2d2d;padding:30px;border-radius:15px;display:flex;flex-direction:column;gap:10px;width:90%;max-width:400px;}
+#loginBox input{padding:10px;border-radius:10px;border:none;background:#3c3c3c;color:#fff;font-size:16px;}
+@media(max-width:600px){#profile{width:40px;height:40px;font-size:20px;}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div id="loginBox">
+    <h2>🔐 Anmeldung</h2>
+    <label for="username">Name:</label>
+    <input id="username" placeholder="z.B. Finn">
+    <label for="password">Passwort:</label>
+    <input id="password" type="password" placeholder="Passwort eingeben">
+    <button id="loginBtn">Anmelden</button>
+    <p id="loginMessage" style="color:#ff6ec7;"></p>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="topBar">
+  <div id="profile"></div>
+  <div id="userNameDisplay"></div>
+  <div>
+    <button id="logoutBtn">🚪 Logout</button>
+  </div>
+</div>
+
+<div id="content">
+  <div id="welcome"></div>
+  <div id="uploadArea">
+    <textarea id="storyText" placeholder="Schreibe hier dein englisches Märchen..."></textarea>
+    <button id="uploadBtn">📜 Hochladen</button>
+  </div>
+  <div id="stories"></div>
+</div>
+
+<footer>© Klasse 8B Märchenprojekt | by Finn 🐸</footer>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+import { getDatabase, ref, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-database.js";
+
+// Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyDsW9JKhyBmlxv-BAcAa4gyHOX6R-KLoQA",
+  authDomain: "englischfairytale8b.firebaseapp.com",
+  databaseURL: "https://englischfairytale8b-default-rtdb.firebaseio.com",
+  projectId: "englischfairytale8b",
+  storageBucket: "englischfairytale8b.appspot.com",
+  messagingSenderId: "1009055770845",
+  appId: "1:1009055770845:web:56ab77e4788b4bc4ced334"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+
+// Benutzer + Passwörter
+const users = {
+  "Finn":"apfel327","Gábor":"mango512","Amelie":"kiwi203","Anna":"birne441","Emil":"pfirsich118",
+  "Enes":"traube794","Jakob":"kirsche682","Leo G.":"banane254","Lena":"beere965","Leo H.":"apfel591",
+  "Leonas":"pflaume721","Liam":"orange433","Luca":"zitrone312","Nelli":"melon483","Paul":"kokos189",
+  "Simon":"apfel901","Marlene":"mango520","Sophia":"birne718","Oskar":"kiwi265","Julian":"traube674","Korbinian":"banane419","FrauKöber":"Lehrer123"
+};
+
+// LOGIN
+const loginScreen = document.getElementById("loginScreen");
+const loginBtn = document.getElementById("loginBtn");
+const loginMessage = document.getElementById("loginMessage");
+
+loginBtn.addEventListener("click", ()=>{
+  const name = document.getElementById("username").value.trim();
+  const pass = document.getElementById("password").value.trim();
+  if(users[name] && users[name] === pass){
+    localStorage.setItem("loggedInUser", name);
+    startApp(name);
+  } else {
+    loginMessage.textContent = "❌ Falscher Name oder Passwort!";
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", ()=>{
+  localStorage.removeItem("loggedInUser");
+  location.reload();
+});
+
+function startApp(userName){
+  loginScreen.style.display = "none";
+  document.getElementById("profile").textContent = userName.charAt(0).toUpperCase();
+  document.getElementById("userNameDisplay").textContent = userName;
+  document.getElementById("welcome").textContent = `Welcome back, ${userName}! ✨`;
+  loadStories();
+}
+
+const loggedIn = localStorage.getItem("loggedInUser");
+if(loggedIn){ startApp(loggedIn); }
+
+// Upload
+document.getElementById("uploadBtn").addEventListener("click", ()=>{
+  const text = document.getElementById("storyText").value.trim();
+  const user = localStorage.getItem("loggedInUser");
+  if(!text) return alert("Bitte gib einen Text ein!");
+  const storiesRef = ref(database, 'stories');
+  push(storiesRef, {author:user,text})
+    .then(()=> document.getElementById("storyText").value = "")
+    .catch(err=>console.error(err));
+});
+
+// Load Stories
+function loadStories(){
+  const storiesRef = ref(database, 'stories');
+  const container = document.getElementById("stories");
+  const currentUser = localStorage.getItem("loggedInUser");
+
+  onValue(storiesRef, (snapshot)=>{
+    const data = snapshot.val() || {};
+    container.innerHTML = "";
+    Object.keys(data).forEach(key=>{
+      const s = data[key];
+      const canDelete = (currentUser === "Finn");
+      const div = document.createElement("div");
+      div.className = "story";
+      div.innerHTML = `
+        <div class="storyHeader">
+          <h3>📖 Veröffentlicht von ${s.author}</h3>
+          <div>
+            <button onclick="readStory(\`${s.text.replace(/`/g,"\\`")}\`)">🔊 Vorlesen</button>
+            ${canDelete?`<button onclick="deleteStory('${key}')">🗑️ Löschen</button>`:""}
+          </div>
+        </div>
+        <div class="storyText">${s.text}</div>
+      `;
+      container.appendChild(div);
+    });
+  });
+}
+
+// Delete
+window.deleteStory = function(key){
+  if(!confirm("Willst du diese Geschichte wirklich löschen?")) return;
+  const storyRef = ref(database, `stories/${key}`);
+  set(storyRef, null);
+};
+
+// Vorlesen
+function readStory(text){
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "en-US";
+  utter.rate = 1;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utter);
+}
+</script>
+
+</body>
+</html>
